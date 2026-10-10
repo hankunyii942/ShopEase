@@ -1,7 +1,7 @@
 <?php
 // api/orders.php
 // POST (no action)              — create order
-// GET                           — list all orders
+// GET                           — list all orders (optional ?id=N to filter)
 // POST ?action=update_status    — admin update order status
 
 header('Content-Type: application/json');
@@ -27,7 +27,18 @@ if ($method === 'POST' && $action === '') {
     $shipName = $data['shipping_name']    ?? '';
     $shipPhone= $data['shipping_phone']   ?? '';
     $shipAddr = $data['shipping_address'] ?? '';
-    $userId   = isset($data['user_id']) && $data['user_id'] ? (int)$data['user_id'] : null;
+
+    // FIX BUG-008: validate user_id — must be positive integer or null
+    $rawUserId = $data['user_id'] ?? null;
+    if ($rawUserId !== null) {
+        $userId = (int)$rawUserId;
+        if ($userId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid user_id']);
+            exit;
+        }
+    } else {
+        $userId = null;
+    }
 
     if (!$shipName || !$shipPhone || !$shipAddr || empty($items) || $total <= 0) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
@@ -63,7 +74,6 @@ if ($method === 'POST' && $action === '') {
     }
     $itemStmt->close();
 
-    // reduce stock for each item
     foreach ($items as $item) {
         $pid = (int)($item['id']       ?? 0);
         $qty = (int)($item['quantity'] ?? 1);
@@ -85,7 +95,6 @@ if ($method === 'POST' && $action === '') {
 // ══════════════════════════════════════════
 // POST ?action=update_status — admin
 // ══════════════════════════════════════════
-// 功能：更新订单状态
 } elseif ($method === 'POST' && $action === 'update_status') {
     $data     = json_decode(file_get_contents('php://input'), true);
     $orderId  = (int)($data['order_id'] ?? 0);
@@ -110,12 +119,32 @@ if ($method === 'POST' && $action === '') {
     $stmt->close();
 
 // ══════════════════════════════════════════
-// GET — list all orders with items
+// GET — list orders (with optional id filter)
+// FIX BUG-001/002: support ?id=N filtering
 // ══════════════════════════════════════════
 } elseif ($method === 'GET') {
-    $result = $db->query("SELECT * FROM orders ORDER BY id DESC");
-    $orders = [];
-    while ($row = $result->fetch_assoc()) { $orders[] = $row; }
+    $filterId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+    if ($filterId > 0) {
+        // return single order by id
+        $stmt = $db->prepare("SELECT * FROM orders WHERE id = ?");
+        $stmt->bind_param("i", $filterId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $orders = [];
+        while ($row = $result->fetch_assoc()) { $orders[] = $row; }
+        $stmt->close();
+
+        if (empty($orders)) {
+            echo json_encode(['success' => false, 'message' => 'Order not found']);
+            exit;
+        }
+    } else {
+        // return all orders
+        $result = $db->query("SELECT * FROM orders ORDER BY id DESC");
+        $orders = [];
+        while ($row = $result->fetch_assoc()) { $orders[] = $row; }
+    }
 
     foreach ($orders as &$order) {
         $oid  = (int)$order['id'];

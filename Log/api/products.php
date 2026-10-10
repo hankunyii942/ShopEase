@@ -1,6 +1,6 @@
 <?php
 // api/products.php
-// GET  ?action=list                      — product list
+// GET  ?action=list                      — product list (supports ?category, ?search, ?sort, ?id)
 // GET  ?action=single&id=N               — one product
 // GET  ?action=reviews&product_id=N      — product reviews
 // POST ?action=add_review                — submit review
@@ -20,7 +20,6 @@ $db     = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
 $action = ($method === 'GET') ? ($_GET['action'] ?? 'list') : ($_GET['action'] ?? '');
 
-// helper: cast a DB row to proper types
 function castProduct($row) {
     $row['id']             = (int)   $row['id'];
     $row['price']          = (float) $row['price'];
@@ -34,10 +33,48 @@ function castProduct($row) {
 
 // ══════════════════════════════════════════
 // GET list
+// FIX BUG-003: empty search returns empty array
+// FIX BUG-006/007: support ?id=N filtering
+// FIX BUG-009: support ?sort=price
 // ══════════════════════════════════════════
 if ($method === 'GET' && $action === 'list') {
     $category = $_GET['category'] ?? '';
-    $search   = $_GET['search']   ?? '';
+    $sort     = $_GET['sort']     ?? '';
+
+    // FIX BUG-006/007: if id is provided, filter by id
+    if (isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
+        if ($id <= 0) {
+            echo json_encode(['success' => true, 'products' => []]);
+            exit;
+        }
+        $stmt = $db->prepare("SELECT * FROM products WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result   = $stmt->get_result();
+        $products = [];
+        while ($row = $result->fetch_assoc()) {
+            $products[] = castProduct($row);
+        }
+        $stmt->close();
+        if (empty($products)) {
+            echo json_encode(['success' => false, 'message' => 'Product not found']);
+        } else {
+            echo json_encode(['success' => true, 'products' => $products]);
+        }
+        exit;
+    }
+
+    // FIX BUG-003: if search key exists but value is empty, return empty
+    if (array_key_exists('search', $_GET)) {
+        $search = $_GET['search'];
+        if ($search === '' || trim($search) === '') {
+            echo json_encode(['success' => true, 'products' => []]);
+            exit;
+        }
+    } else {
+        $search = '';
+    }
 
     $sql    = "SELECT * FROM products WHERE 1=1";
     $params = [];
@@ -55,7 +92,17 @@ if ($method === 'GET' && $action === 'list') {
         $params[] = $like;
         $types   .= 'ss';
     }
-    $sql .= " ORDER BY id ASC";
+
+    // FIX BUG-009: support sort parameter
+    if ($sort === 'price') {
+        $sql .= " ORDER BY price ASC";
+    } elseif ($sort === 'price_desc') {
+        $sql .= " ORDER BY price DESC";
+    } elseif ($sort === 'rating') {
+        $sql .= " ORDER BY rating DESC";
+    } else {
+        $sql .= " ORDER BY id ASC";
+    }
 
     $stmt = $db->prepare($sql);
     if ($types) { $stmt->bind_param($types, ...$params); }
@@ -87,7 +134,6 @@ if ($method === 'GET' && $action === 'list') {
 // ══════════════════════════════════════════
 // GET reviews
 // ══════════════════════════════════════════
-
 } elseif ($method === 'GET' && $action === 'reviews') {
     $pid = (int)($_GET['product_id'] ?? 0);
     if (!$pid) { echo json_encode(['success' => false, 'message' => 'Missing product_id']); exit; }
@@ -107,7 +153,6 @@ if ($method === 'GET' && $action === 'list') {
 // ══════════════════════════════════════════
 // POST add_review
 // ══════════════════════════════════════════
-// 功能：提交评论 校验必填字段和评分范围(1-5)后插入reviews表
 } elseif ($method === 'POST' && $action === 'add_review') {
     $data      = json_decode(file_get_contents('php://input'), true);
     $productId = (int)($data['product_id'] ?? 0);
@@ -120,7 +165,7 @@ if ($method === 'GET' && $action === 'list') {
         echo json_encode(['success' => false, 'message' => 'Missing required fields']); exit;
     }
     if ($rating < 1 || $rating > 5) {
-        echo json_encode(['success' => false, 'message' => 'Rating must be 1–5']); exit;
+        echo json_encode(['success' => false, 'message' => 'Rating must be 1-5']); exit;
     }
 
     $stmt = $db->prepare(
@@ -155,7 +200,6 @@ if ($method === 'GET' && $action === 'list') {
         exit;
     }
 
-    // specs: accept comma-separated string or array
     if (is_string($specsRaw)) {
         $specsArr = array_values(array_filter(array_map('trim', explode(',', $specsRaw))));
     } else {
