@@ -1,6 +1,6 @@
 <?php
 // api/users.php
-// Actions: register | login | forgot_step1 | forgot_step2
+// Actions: register | login | logout | forgot_step1 | forgot_step2
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -10,6 +10,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
 
 require_once 'db_connect.php';
+session_start();
 $db = getDB();
 
 $data   = json_decode(file_get_contents('php://input'), true);
@@ -42,6 +43,23 @@ if ($action === 'register') {
         echo json_encode(['success' => false, 'message' => 'Please set a security question and answer']);
         exit;
     }
+    // FIX BUG-012: check length before writing to the database
+    if (mb_strlen($name) > 100) {
+        echo json_encode(['success' => false, 'message' => 'Name must be 100 characters or fewer']);
+        exit;
+    }
+    if (mb_strlen($email) > 150) {
+        echo json_encode(['success' => false, 'message' => 'Email must be 150 characters or fewer']);
+        exit;
+    }
+    if (mb_strlen($phone) > 20) {
+        echo json_encode(['success' => false, 'message' => 'Phone must be 20 characters or fewer']);
+        exit;
+    }
+    if (mb_strlen($security_q) > 200) {
+        echo json_encode(['success' => false, 'message' => 'Security question is too long']);
+        exit;
+    }
 
     $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
@@ -69,6 +87,10 @@ if ($action === 'register') {
 
     if ($stmt->execute()) {
         $newId = $db->insert_id;
+        // FIX BUG-010/011: remember the logged-in user on the server
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = (int)$newId;
+        $_SESSION['role']    = $role;
         echo json_encode([
             'success' => true,
             'message' => 'Account created successfully! Welcome to ShopEase.',
@@ -90,6 +112,11 @@ if ($action === 'register') {
         echo json_encode(['success' => false, 'message' => 'Please enter your email and password']);
         exit;
     }
+    // FIX BUG-005: report invalid email format (does not reveal whether an account exists)
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email format']);
+        exit;
+    }
 
     $stmt = $db->prepare("SELECT id, name, email, password, role FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
@@ -103,6 +130,11 @@ if ($action === 'register') {
         exit;
     }
 
+    // FIX BUG-010/011: remember the logged-in user on the server
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int)$user['id'];
+    $_SESSION['role']    = $user['role'] ?? 'customer';
+
     echo json_encode([
         'success' => true,
         'message' => 'Login successful! Welcome back, ' . $user['name'] . '.',
@@ -113,6 +145,14 @@ if ($action === 'register') {
             'role'  => $user['role'] ?? 'customer'
         ]
     ]);
+
+// ══════════════════════════════════════════
+// LOGOUT
+// ══════════════════════════════════════════
+} elseif ($action === 'logout') {
+    $_SESSION = [];
+    session_destroy();
+    echo json_encode(['success' => true, 'message' => 'Logged out']);
 
 // ══════════════════════════════════════════
 // FORGOT PASSWORD STEP 1
@@ -184,8 +224,11 @@ if ($action === 'register') {
 
     echo json_encode(['success' => true, 'message' => 'Password reset successfully! You can now login.']);
 
+// FIX BUG-004: clear message when action is missing or invalid
+} elseif ($action === '') {
+    echo json_encode(['success' => false, 'message' => 'Missing action parameter']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Unknown action: ' . $action]);
+    echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }
 
 $db->close();

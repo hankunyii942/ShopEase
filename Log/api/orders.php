@@ -1,7 +1,7 @@
 <?php
 // api/orders.php
 // POST (no action)              — create order
-// GET                           — list all orders (optional ?id=N to filter)
+// GET                           — login required; admin sees all, customer sees own (optional ?id=N)
 // POST ?action=update_status    — admin update order status
 
 header('Content-Type: application/json');
@@ -12,7 +12,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
 
 require_once 'db_connect.php';
+session_start();
 $db     = getDB();
+$sessionUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$isAdminUser   = ($_SESSION['role'] ?? '') === 'admin';
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -96,6 +99,12 @@ if ($method === 'POST' && $action === '') {
 // POST ?action=update_status — admin
 // ══════════════════════════════════════════
 } elseif ($method === 'POST' && $action === 'update_status') {
+    // only admin can change order status
+    if (!$isAdminUser) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Admin only']);
+        exit;
+    }
     $data     = json_decode(file_get_contents('php://input'), true);
     $orderId  = (int)($data['order_id'] ?? 0);
     $status   = trim($data['status']   ?? '');
@@ -123,12 +132,23 @@ if ($method === 'POST' && $action === '') {
 // FIX BUG-001/002: support ?id=N filtering
 // ══════════════════════════════════════════
 } elseif ($method === 'GET') {
+    // FIX BUG-010/011: login required; customers can only see their own orders
+    if ($sessionUserId <= 0) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Please login first']);
+        exit;
+    }
     $filterId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if ($filterId > 0) {
         // return single order by id
-        $stmt = $db->prepare("SELECT * FROM orders WHERE id = ?");
-        $stmt->bind_param("i", $filterId);
+        if ($isAdminUser) {
+            $stmt = $db->prepare("SELECT * FROM orders WHERE id = ?");
+            $stmt->bind_param("i", $filterId);
+        } else {
+            $stmt = $db->prepare("SELECT * FROM orders WHERE id = ? AND user_id = ?");
+            $stmt->bind_param("ii", $filterId, $sessionUserId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         $orders = [];
@@ -140,8 +160,16 @@ if ($method === 'POST' && $action === '') {
             exit;
         }
     } else {
-        // return all orders
-        $result = $db->query("SELECT * FROM orders ORDER BY id DESC");
+        // admin: all orders; customer: own orders only
+        if ($isAdminUser) {
+            $result = $db->query("SELECT * FROM orders ORDER BY id DESC");
+        } else {
+            $stmt = $db->prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC");
+            $stmt->bind_param("i", $sessionUserId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $stmt->close();
+        }
         $orders = [];
         while ($row = $result->fetch_assoc()) { $orders[] = $row; }
     }
