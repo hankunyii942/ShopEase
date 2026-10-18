@@ -1,7 +1,20 @@
 <?php
 // api/db_connect.php
 // 数据库连接配置 — 所有 API 文件都引用这个
+// ============================================================
 
+// FIX BUG-012: never print PHP errors to the client; return JSON instead
+ini_set('display_errors', '0');
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+set_exception_handler(function ($e) {
+    error_log($e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    echo json_encode(['success' => false, 'message' => 'Server error. Please try again later.']);
+    exit;
+});
 
 define('DB_HOST', 'localhost');   // 主机，XAMPP 默认是 localhost
 define('DB_USER', 'root');        // phpMyAdmin 默认用户名是 root
@@ -16,7 +29,7 @@ function getDB() {
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Database connection failed: ' . $conn->connect_error
+            'message' => 'Database connection failed'
         ]);
         exit;
     }
