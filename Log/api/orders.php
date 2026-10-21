@@ -23,15 +23,13 @@ $action = $_GET['action'] ?? '';
 // POST — create order
 // ══════════════════════════════════════════
 if ($method === 'POST' && $action === '') {
-    $data     = json_decode(file_get_contents('php://input'), true);
-    $items    = $data['items']            ?? [];
-    $total    = (float)($data['total_price']     ?? 0);
-    $payment  = $data['payment_method']   ?? 'card';
-    $shipName = $data['shipping_name']    ?? '';
-    $shipPhone= $data['shipping_phone']   ?? '';
-    $shipAddr = $data['shipping_address'] ?? '';
+    $data      = json_decode(file_get_contents('php://input'), true);
+    $items     = $data['items']            ?? [];
+    $payment   = $data['payment_method']   ?? 'card';
+    $shipName  = $data['shipping_name']    ?? '';
+    $shipPhone = $data['shipping_phone']   ?? '';
+    $shipAddr  = $data['shipping_address'] ?? '';
 
-    // FIX BUG-008: validate user_id — must be positive integer or null
     $rawUserId = $data['user_id'] ?? null;
     if ($rawUserId !== null) {
         $userId = (int)$rawUserId;
@@ -43,10 +41,42 @@ if ($method === 'POST' && $action === '') {
         $userId = null;
     }
 
-    if (!$shipName || !$shipPhone || !$shipAddr || empty($items) || $total <= 0) {
+    if (!$shipName || !$shipPhone || !$shipAddr || empty($items) || !is_array($items)) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         exit;
     }
+
+    $priceStmt  = $db->prepare("SELECT name, price, stock FROM products WHERE id = ?");
+    $orderItems = [];
+    $total      = 0;
+
+    foreach ($items as $item) {
+        $pid = (int)($item['id']       ?? 0);
+        $qty = (int)($item['quantity'] ?? 0);
+        if ($pid <= 0 || $qty <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid item']);
+            exit;
+        }
+
+        $priceStmt->bind_param("i", $pid);
+        $priceStmt->execute();
+        $product = $priceStmt->get_result()->fetch_assoc();
+
+        if (!$product) {
+            echo json_encode(['success' => false, 'message' => 'Product not found']);
+            exit;
+        }
+        if ((int)$product['stock'] < $qty) {
+            echo json_encode(['success' => false, 'message' => 'Insufficient stock']);
+            exit;
+        }
+
+        $price  = (float)$product['price'];
+        $total += $price * $qty;
+        $orderItems[] = ['id' => $pid, 'name' => $product['name'], 'quantity' => $qty, 'price' => $price];
+    }
+    $priceStmt->close();
+    $total = round($total, 2);
 
     $tracking = 'TRK' . strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 9));
 
@@ -57,7 +87,7 @@ if ($method === 'POST' && $action === '') {
     $stmt->bind_param("idsssss", $userId, $total, $payment, $shipName, $shipPhone, $shipAddr, $tracking);
 
     if (!$stmt->execute()) {
-        echo json_encode(['success' => false, 'message' => 'Failed to create order: ' . $stmt->error]);
+        echo json_encode(['success' => false, 'message' => 'Failed to create order']);
         $stmt->close();
         exit;
     }
@@ -67,32 +97,22 @@ if ($method === 'POST' && $action === '') {
     $itemStmt = $db->prepare(
         "INSERT INTO order_items (order_id, product_id, product_name, quantity, price) VALUES (?, ?, ?, ?, ?)"
     );
-    foreach ($items as $item) {
-        $pid   = (int)($item['id']       ?? 0);
-        $pname = $item['name']           ?? 'Unknown';
-        $qty   = (int)($item['quantity'] ?? 1);
-        $price = (float)($item['price']  ?? 0);
-        $itemStmt->bind_param("iisid", $orderId, $pid, $pname, $qty, $price);
+    $stockStmt = $db->prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
+    foreach ($orderItems as $oi) {
+        $itemStmt->bind_param("iisid", $orderId, $oi['id'], $oi['name'], $oi['quantity'], $oi['price']);
         $itemStmt->execute();
+        $stockStmt->bind_param("ii", $oi['quantity'], $oi['id']);
+        $stockStmt->execute();
     }
     $itemStmt->close();
-
-    foreach ($items as $item) {
-        $pid = (int)($item['id']       ?? 0);
-        $qty = (int)($item['quantity'] ?? 1);
-        if ($pid > 0) {
-            $sStmt = $db->prepare("UPDATE products SET stock = GREATEST(stock - ?, 0) WHERE id = ?");
-            $sStmt->bind_param("ii", $qty, $pid);
-            $sStmt->execute();
-            $sStmt->close();
-        }
-    }
+    $stockStmt->close();
 
     echo json_encode([
-        'success'  => true,
-        'order_id' => $orderId,
-        'tracking' => $tracking,
-        'message'  => 'Order created successfully!'
+        'success'     => true,
+        'order_id'    => $orderId,
+        'tracking'    => $tracking,
+        'total_price' => $total,
+        'message'     => 'Order created successfully!'
     ]);
 
 // ══════════════════════════════════════════
