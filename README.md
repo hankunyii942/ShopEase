@@ -21,3 +21,4 @@ A full-stack web-based e-commerce platform built as my Final Year Project at Uni
 - Fixed order ID type mismatch (String vs Integer) causing strict equality failure
 - Fixed missing admin role field in users table causing permission validation failure
 - Migrated wishlist from localStorage to database for multi-device sync
+接口自动化测试代码见：https://github.com/hankunyii942/shopease-api-autotest
