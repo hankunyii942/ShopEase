@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopEase - Premium Shopping Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-inner">
+    <div class="logo" id="logo">🛒 ShopEase</div>
+    <div class="search-wrap">
+      <input type="text" id="search-input" placeholder="Search for iPhone, MacBook, Headphones..." autocomplete="off">
+      <button class="btn-clear" id="search-clear" style="display:none" aria-label="Clear search">✕</button>
+      <button class="btn-search" id="search-btn">Search</button>
+    </div>
+    <div class="header-nav" id="header-nav"></div>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="page-home">
+    <div class="hero">
+      <h1>Premium Shopping Experience</h1>
+      <p>Quality Products | Fast Delivery | Secure Payment</p>
+      <button class="btn-white" onclick="goTo('products')">Shop Now</button>
+    </div>
+    <div class="features">
+      <div class="feature-card"><span class="feature-icon">🚚</span><div><h3>Fast Delivery</h3><p>Delivered within 24 hours</p></div></div>
+      <div class="feature-card"><span class="feature-icon">🛡️</span><div><h3>Secure Shopping</h3><p>100% authentic products</p></div></div>
+      <div class="feature-card"><span class="feature-icon">🔄</span><div><h3>7-Day Returns</h3><p>Hassle-free returns</p></div></div>
+    </div>
+    <div class="mb-6">
+      <div class="section-header"><h2>Shop by Category</h2></div>
+      <div class="category-grid" id="home-categories"></div>
+    </div>
+    <div>
+      <div class="section-header">
+        <h2>Featured Products</h2>
+        <a href="#" onclick="goTo('products');return false;">View All →</a>
+      </div>
+      <div class="product-grid" id="home-featured"></div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS PAGE -->
+  <div class="page" id="page-products">
+    <div class="products-layout">
+      <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">⚙️ Filters</button>
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-card">
+          <h3>Categories</h3>
+          <div id="sidebar-cats"></div>
+        </div>
+        <div class="sidebar-card">
+          <h3>Price Range</h3>
+          <div style="font-size:14px;font-weight:600;margin-bottom:10px" id="price-display">$0 – $20,000</div>
+          <input type="range" id="price-range" min="0" max="20000" step="100" value="20000" style="width:100%;margin-bottom:10px">
+          <button class="filter-btn price-preset" data-max="1000">Under $1,000</button>
+          <button class="filter-btn price-preset" data-max="5000">$1,000 – $5,000</button>
+          <button class="filter-btn price-preset" data-max="10000">$5,000 – $10,000</button>
+          <button class="filter-btn price-preset" data-max="20000">$10,000+</button>
+        </div>
+        <div class="sidebar-card">
+          <h3>Sort By</h3>
+          <select id="sort-select" style="width:100%;padding:8px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none">
+            <option value="featured">Featured</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="rating">Highest Rated</option>
+            <option value="popular">Most Popular</option>
+          </select>
+        </div>
+      </div>
+      <div class="products-main">
+        <div class="products-toolbar">
+          <h2 id="products-header">All Products</h2>
+          <span id="products-count">0 products found</span>
+        </div>
+        <div class="product-grid" id="products-grid"></div>
+        <div class="empty-state" id="products-empty" style="display:none">
+          <div class="empty-icon">🔍</div>
+          <h3>No products found</h3>
+          <p>Try adjusting your filters or search terms</p>
+          <button class="btn-detail" id="clear-filters-btn" style="padding:12px 24px;display:inline-block">Clear all filters</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCT DETAIL PAGE -->
+  <div class="page" id="page-detail">
+    <button class="btn-back" onclick="goTo('products')">← Back to Products</button>
+    <div class="detail-grid">
+      <div class="detail-img-wrap"><img id="detail-img" src="" alt=""></div>
+      <div>
+        <h1 class="detail-title" id="detail-title"></h1>
+        <div class="detail-meta" id="detail-meta"></div>
+        <p class="detail-desc" id="detail-desc"></p>
+        <div class="specs-box">
+          <h3>Specifications</h3>
+          <ul id="detail-specs"></ul>
+        </div>
+        <div class="detail-price" id="detail-price"></div>
+        <div class="detail-actions">
+          <button class="btn-add-cart" id="detail-add-cart-btn">Add to Cart</button>
+          <button class="btn-wish-detail" id="detail-wish-btn">🤍</button>
+        </div>
+      </div>
+    </div>
+    <!-- Customer Reviews -->
+    <div class="specs-box reviews-section" id="reviews-box">
+      <div class="reviews-header">
+        <h3>Customer Reviews</h3>
+        <button class="btn-write-review" id="btn-write-review" onclick="toggleReviewForm()">✏️ Write a Review</button>
+      </div>
+      <div class="review-form-wrap" id="review-form-wrap" style="display:none">
+        <div class="review-form">
+          <div class="form-group">
+            <label>Your Rating *</label>
+            <div class="star-rating" id="star-rating">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Your Comment *</label>
+            <textarea id="review-comment" rows="3" placeholder="Share your experience with this product..."
+              style="width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;resize:vertical"></textarea>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn-submit-review" onclick="submitReview()">Submit Review</button>
+            <button class="btn-cancel-review" onclick="toggleReviewForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div id="reviews-list"></div>
+    </div>
+  </div>
+
+  <!-- CART PAGE -->
+  <div class="page" id="page-cart">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:20px">Shopping Cart</h2>
+    <div class="empty-state" id="cart-empty" style="display:none">
+      <div class="empty-icon">🛒</div>
+      <h3>Your cart is empty</h3>
+      <p>Browse our products and add items to your cart</p>
+      <button class="btn-detail" onclick="goTo('products')" style="padding:12px 24px;display:inline-block">Start Shopping</button>
+    </div>
+    <div id="cart-items"></div>
+    <div class="cart-summary" id="cart-summary">
+      <div class="cart-summary-row">
+        <span>Subtotal</span><span id="cart-total">$0</span>
+      </div>
+      <button class="btn-checkout" onclick="state.isCheckout=true;render()">
+        Proceed to Checkout (<span id="cart-count">0 items</span>)
+      </button>
+    </div>
+  </div>
+
+  <!-- CHECKOUT PAGE -->
+  <div class="page" id="page-checkout">
+    <div class="checkout-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2 style="font-size:22px;font-weight:700">Checkout</h2>
+        <button style="color:#2563eb;font-size:14px" onclick="state.isCheckout=false;goTo('cart')">← Back to Cart</button>
+      </div>
+      <form id="checkout-form">
+        <div class="checkout-section">
+          <h3>Shipping Information</h3>
+          <div class="form-group"><label>Full Name *</label><input type="text" id="ship-name" placeholder="Enter your full name" required autocomplete="name"></div>
+          <div class="form-group"><label>Phone Number *</label><input type="tel" id="ship-phone" placeholder="Enter phone number" required autocomplete="tel"></div>
+          <div class="form-group"><label>Shipping Address *</label><textarea id="ship-address" rows="3" placeholder="Enter complete address" required autocomplete="street-address"></textarea></div>
+        </div>
+        <div class="checkout-section">
+          <h3>Payment Method</h3>
+          <div class="payment-grid">
+            <button type="button" class="payment-btn active" data-method="alipay"><span class="pay-icon">💳</span><span>Alipay</span></button>
+            <button type="button" class="payment-btn" data-method="wechat"><span class="pay-icon">💚</span><span>WeChat Pay</span></button>
+            <button type="button" class="payment-btn" data-method="card"><span class="pay-icon">🏦</span><span>Credit Card</span></button>
+            <button type="button" class="payment-btn" data-method="applepay"><span class="pay-icon">🍎</span><span>Apple Pay</span></button>
+          </div>
+        </div>
+        <div class="checkout-section">
+          <h3>Order Summary</h3>
+          <div id="checkout-items"></div>
+          <div class="order-total-row"><span>Total</span><span id="checkout-total">$0</span></div>
+        </div>
+        <button type="submit" class="btn-place-order">Place Order</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ORDERS PAGE -->
+  <div class="page" id="page-orders">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:20px">My Orders</h2>
+    <div class="empty-state" id="orders-empty" style="display:none">
+      <div class="empty-icon">📦</div>
+      <h3>No orders yet</h3>
+      <p>Your order history will appear here</p>
+      <button class="btn-detail" onclick="goTo('products')" style="padding:12px 24px;display:inline-block">Start Shopping</button>
+    </div>
+    <div id="orders-list"></div>
+  </div>
+
+  <!-- WISHLIST PAGE -->
+  <div class="page" id="page-wishlist">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:20px">My Wishlist</h2>
+    <div class="empty-state" id="wishlist-empty" style="display:none">
+      <div class="empty-icon">🤍</div>
+      <h3>Your wishlist is empty</h3>
+      <p>Save products you love by clicking the heart icon</p>
+      <button class="btn-detail" onclick="goTo('products')" style="padding:12px 24px;display:inline-block">Browse Products</button>
+    </div>
+    <div class="product-grid" id="wishlist-grid"></div>
+  </div>
+
+  <!-- ADMIN PAGE -->
+  <div class="page" id="page-admin">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:20px">Admin Dashboard</h2>
+    <div class="admin-stats">
+      <div class="stat-card"><div class="stat-icon blue">📊</div><div><div class="stat-label">Total Sales</div><div class="stat-value" id="admin-sales">$0</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">📦</div><div><div class="stat-label">Total Orders</div><div class="stat-value" id="admin-orders">0</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">🛒</div><div><div class="stat-label">Avg Order Value</div><div class="stat-value" id="admin-avg">$0</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">❤️</div><div><div class="stat-label">Wishlist Items</div><div class="stat-value" id="admin-wishlist">0</div></div></div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="admin-table-wrap">
+      <h3>Recent Orders</h3>
+      <table>
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th></tr></thead>
+        <tbody id="admin-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Product Management -->
+    <div class="admin-table-wrap" style="margin-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin-bottom:0">Product Management</h3>
+        <button onclick="openAddModal()"
+          style="background:#2563eb;color:#fff;padding:8px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none">
+          ➕ Add New Product
+        </button>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="background:#f9fafb">
+            <tr>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Product</th>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Category</th>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Price</th>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Stock</th>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Rating</th>
+              <th style="padding:10px 14px;text-align:left;font-size:13px;font-weight:600">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-inner">
+    <div><h3 class="footer-brand">ShopEase</h3><p class="footer-tagline">Your trusted online shopping platform</p></div>
+    <div><h4 class="footer-heading">Customer Service</h4><ul class="footer-links"><li>Help Center</li><li>Return Policy</li><li>Shipping Info</li></ul></div>
+    <div><h4 class="footer-heading">About Us</h4><ul class="footer-links"><li>Company Info</li><li>Contact Us</li><li>Careers</li></ul></div>
+    <div><h4 class="footer-heading">Contact</h4><p class="footer-tagline">1-800-123-4567</p></div>
+  </div>
+  <div class="footer-bottom">© 2026 ShopEase. All rights reserved.</div>
+</footer>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="modal-auth" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="modal-box">
+    <h2 id="auth-title">Login</h2>
+
+    <!-- Login / Register section -->
+    <div id="auth-section">
+      <form id="auth-form" novalidate>
+        <div id="auth-register-fields" style="display:none">
+          <div class="form-group"><label>Full Name *</label><input type="text" id="auth-name" placeholder="Enter your name" autocomplete="name"></div>
+          <div class="form-group"><label>Phone Number</label><input type="tel" id="auth-phone" placeholder="Enter phone number" autocomplete="tel"></div>
+          <div class="form-group">
+            <label>Security Question *</label>
+            <select id="auth-security-q" style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s">
+              <option value="">— Select a question —</option>
+              <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+              <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+              <option value="What city were you born in?">What city were you born in?</option>
+              <option value="What is your favorite sports team?">What is your favorite sports team?</option>
+              <option value="What was the name of your primary school?">What was the name of your primary school?</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Security Answer * <span style="font-weight:400;color:#6b7280">(case-insensitive)</span></label><input type="text" id="auth-security-a" placeholder="Your answer" autocomplete="off"></div>
+        </div>
+        <div class="form-group"><label>Email *</label><input type="email" id="auth-email" placeholder="Enter your email" autocomplete="email" required></div>
+        <div class="form-group">
+          <label>Password * (min. 6 characters)</label>
+          <div class="pw-wrap">
+            <input type="password" id="auth-password" placeholder="Enter password" autocomplete="current-password" required>
+            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+        <div class="auth-error" id="auth-error" style="display:none"></div>
+        <button type="submit" class="btn-auth" id="auth-submit-btn">Login</button>
+      </form>
+      <div id="forgot-link-wrap" style="text-align:right;margin-top:8px">
+        <button class="btn-forgot" onclick="switchToForgot()">Forgot password?</button>
+      </div>
+      <button class="modal-switch" id="auth-switch-btn">Don't have an account? Register</button>
+    </div>
+
+    <!-- Forgot password section -->
+    <div id="forgot-section" style="display:none">
+      <div id="forgot-step1">
+        <p style="font-size:14px;color:#6b7280;margin-bottom:16px">Enter your registered email and we will ask you a security question.</p>
+        <div class="form-group"><label>Registered Email *</label><input type="email" id="forgot-email" placeholder="Enter your email address" autocomplete="email"></div>
+        <div class="auth-error" id="forgot-error1" style="display:none"></div>
+        <button class="btn-auth" id="btn-forgot-next" onclick="forgotStep1()">Next →</button>
+      </div>
+      <div id="forgot-step2" style="display:none">
+        <div class="forgot-question-box" id="forgot-question-display"></div>
+        <div class="form-group"><label>Your Answer *</label><input type="text" id="forgot-answer" placeholder="Enter your security answer" autocomplete="off"></div>
+        <div class="form-group">
+          <label>New Password * (min. 6 characters)</label>
+          <div class="pw-wrap">
+            <input type="password" id="forgot-new-pw" placeholder="Enter new password" autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="toggleForgotPw()" aria-label="Toggle password">👁</button>
+          </div>
+        </div>
+        <div class="auth-error" id="forgot-error2" style="display:none"></div>
+        <button class="btn-auth" id="btn-forgot-reset" onclick="forgotStep2()">Reset Password</button>
+      </div>
+      <button class="btn-back-login" onclick="backToLogin()">← Back to Login</button>
+    </div>
+
+    <button class="btn-close-modal" id="auth-close-btn">Close</button>
+  </div>
+</div>
+
+<!-- ===== TRACKING MODAL ===== -->
+<div class="modal-overlay" id="modal-tracking" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:560px">
+    <h2>Order Tracking</h2>
+    <div style="margin-bottom:16px">
+      <p style="font-size:13px;font-weight:600;margin-bottom:6px">Tracking Number</p>
+      <p style="font-family:monospace;background:#f3f4f6;padding:10px 14px;border-radius:8px;font-size:15px" id="track-number"></p>
+    </div>
+    <div class="tracking-steps">
+      <div class="tracking-step"><div class="step-dot done">✓</div><div class="step-info"><p>Order Placed</p><small>Confirmed</small></div></div>
+      <div class="tracking-step"><div class="step-dot done">✓</div><div class="step-info"><p>Payment Confirmed</p><small>Paid</small></div></div>
+      <div class="tracking-step"><div class="step-dot active">⋯</div><div class="step-info"><p>Processing</p><small>Preparing your order</small></div></div>
+      <div class="tracking-step"><div class="step-dot pending">○</div><div class="step-info"><p>Shipped</p><small>On the way</small></div></div>
+      <div class="tracking-step"><div class="step-dot pending">○</div><div class="step-info"><p>Delivered</p><small>Est. <span id="track-delivery"></span></small></div></div>
+    </div>
+    <div style="background:#eff6ff;border-radius:10px;padding:14px;margin-bottom:16px">
+      <p style="font-size:13px;font-weight:700;margin-bottom:8px">Shipping Address</p>
+      <p id="track-ship-name" style="font-size:14px;font-weight:600"></p>
+      <p id="track-ship-phone" style="font-size:14px;color:#6b7280"></p>
+      <p id="track-ship-address" style="font-size:14px;color:#6b7280"></p>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button onclick="closeTrackingModal()" style="flex:1;background:#e5e7eb;padding:12px;border-radius:10px;font-weight:600;cursor:pointer">Close</button>
+      <button id="tracking-close" style="flex:1;background:#2563eb;color:#fff;padding:12px;border-radius:10px;font-weight:600;cursor:pointer;border:none">Contact Support</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PRODUCT ADD/EDIT MODAL (Admin) ===== -->
+<div class="modal-overlay" id="modal-product" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:560px">
+    <h2 id="product-modal-title">Add New Product</h2>
+    <form id="product-form" novalidate>
+      <input type="hidden" id="pf-id">
+      <div class="form-group"><label>Product Name *</label><input type="text" id="pf-name" placeholder="e.g. iPhone 15 Pro Max" required></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Price ($) *</label><input type="number" id="pf-price" placeholder="9999" min="0.01" step="0.01" required></div>
+        <div class="form-group"><label>Original Price ($)</label><input type="number" id="pf-orig-price" placeholder="10999" min="0.01" step="0.01"></div>
+      </div>
+      <div class="form-group"><label>Image URL</label><input type="text" id="pf-image" placeholder="https://..."></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="pf-category" style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none">
+            <option value="electronics">Electronics</option>
+            <option value="fashion">Fashion</option>
+            <option value="home">Home & Living</option>
+            <option value="audio">Audio</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Rating (1–5)</label><input type="number" id="pf-rating" placeholder="5.0" min="1" max="5" step="0.1" value="5.0"></div>
+      </div>
+      <div class="form-group"><label>Stock Quantity *</label><input type="number" id="pf-stock" placeholder="0" min="0" step="1" required></div>
+      <div class="form-group"><label>Description *</label><textarea id="pf-description" rows="2" placeholder="Short product description" style="width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;resize:vertical" required></textarea></div>
+      <div class="form-group"><label>Specifications <span style="font-weight:400;color:#6b7280">(comma-separated)</span></label><textarea id="pf-specs" rows="2" placeholder="6.7-inch display, 256GB storage, 5G network" style="width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;resize:vertical"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn-auth" id="pf-submit-btn" style="flex:1;margin-top:0">Save Product</button>
+        <button type="button" onclick="closeProductModal()" style="flex:1;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== BACK TO TOP ===== -->
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script src="js/app.js"></script>
+</body>
+</html>
